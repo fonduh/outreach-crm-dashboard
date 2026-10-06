@@ -45,8 +45,11 @@ python3 backend/manage_sharing.py off           # stop serving the shared data
 
 Disabling sharing stops future requests; it cannot recall copies viewers saved.
 The owner dashboard at the root URL still uses private sign-in. Its Mermaid
-process settings stay browser-local; the audience view uses the standard stage
-map with the current counts and a separate browser storage key. No CRM data is
+process edits stay browser-local. `site/process-config.js` preserves the recovered
+owner stage map as the published baseline; the audience page always uses that
+map with current counts, regardless of a visitor's local storage. Owner-browser
+edits continue to take precedence in the private editor. Future edits must be
+exported and published to update the shared map. No CRM data is
 committed to GitHub. The audience page requests no search indexing, which is
 not access control.
 

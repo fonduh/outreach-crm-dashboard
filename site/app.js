@@ -41,8 +41,8 @@ function validateState(s){
  const used=new Set();for(const [id,list] of Object.entries(s.bindings)){if(['__proto__','constructor','prototype'].includes(id)||AGGREGATES.has(id)||!Array.isArray(list))throw Error('Invalid stage binding.');for(const key of list){if(!BUCKETS[key]||used.has(key))throw Error('Invalid or duplicate CRM-stage mapping.');used.add(key);}}
  return structuredClone(s);
 }
-let state=defaults(),data=null,nodes=[],history=[],selectedStage='',selectedJob='',bindingStage='APPLIED',statusFilter='',revision=0,zoom=1,box=null,busy=false;
-try{const saved=localStorage.getItem(KEY);if(saved){const old=JSON.parse(saved);if(old.schemaVersion===1&&!localStorage.getItem(KEY+'-pre-interested'))localStorage.setItem(KEY+'-pre-interested',saved);state=validateState(old);}}catch(e){setTimeout(()=>notice('Saved process could not be loaded; original storage has not been overwritten.'),1000);}
+let state=window.CRM_PUBLISHED_PROCESS?validateState(window.CRM_PUBLISHED_PROCESS):defaults(),data=null,nodes=[],history=[],selectedStage='',selectedJob='',bindingStage='APPLIED',statusFilter='',revision=0,zoom=1,box=null,busy=false;
+try{const saved=window.CRM_AUDIENCE?null:localStorage.getItem(KEY);if(saved){const old=JSON.parse(saved);if(old.schemaVersion===1&&!localStorage.getItem(KEY+'-pre-interested'))localStorage.setItem(KEY+'-pre-interested',saved);state=validateState(old);}}catch(e){setTimeout(()=>notice('Saved process could not be loaded; original storage has not been overwritten.'),1000);}
 function el(tag,cls='',text=''){const e=document.createElement(tag);if(cls)e.className=cls;if(text)e.textContent=text;return e;}
 function notice(text){$('#notice').textContent=text;$('#notice').hidden=false;clearTimeout(notice.timer);notice.timer=setTimeout(()=>$('#notice').hidden=true,6000);}
 function persist(){try{localStorage.setItem(KEY,JSON.stringify(state));$('#process-save').textContent='Process saved in this browser · export to keep a copy';}catch{$('#process-save').textContent='Browser save unavailable — export your process';}}
