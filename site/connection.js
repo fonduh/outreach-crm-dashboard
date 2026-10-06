@@ -29,7 +29,7 @@
      return reply({...data,storage:'private',read_at:row.updated_at});
     }}
     if(snapshot){banner('Local snapshot · stays in this browser tab · refresh by opening a newer export');return reply({...snapshot,storage:'browser'});}
-    banner(config?'Sign in to load your private CRM. Your applications are visible only to your account.':'Connect your private backend or open a local CRM snapshot. No application data is published with this site.');return reply(empty());
+    banner(config?'Sign in to view your full CRM and edit company relationships. Use Share view for the public overview.':'Connect your private backend or open a local CRM snapshot. No application data is published with this site.');return reply(empty());
    }catch(e){return reply({ok:false,error:e.message},400);}
   },
   async saveTags(companyId,tags,expectedTags){
