@@ -66,10 +66,13 @@ class Remote:
         if urllib.parse.urlparse(self.url).scheme != 'https':
             raise RuntimeError('SUPABASE_URL must use HTTPS')
         self.owner = str(uuid.UUID(os.environ['CRM_OWNER_ID']))
-        key = os.environ['SUPABASE_SERVICE_ROLE_KEY']
-        if not key.startswith('eyJ'):
-            raise RuntimeError('Use the legacy service_role JWT for the local sync only')
-        self.headers = {'apikey': key, 'Authorization': 'Bearer ' + key}
+        key = os.environ.get('SUPABASE_SECRET_KEY') or os.environ.get('SUPABASE_SERVICE_ROLE_KEY', '')
+        if key.startswith('sb_secret_'):
+            self.headers = {'apikey': key}
+        elif key.startswith('eyJ'):
+            self.headers = {'apikey': key, 'Authorization': 'Bearer ' + key}
+        else:
+            raise RuntimeError('Set a server-only Supabase secret key for the local sync')
 
     def call(self, path, method='GET', body=None, prefer=None):
         headers = dict(self.headers)

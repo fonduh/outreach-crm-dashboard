@@ -8,10 +8,10 @@
  function authStatus(text){$('#auth-state').textContent=text;}
  function validateSnapshot(value){const d=value.payload||value;for(const key of ['jobs','companies','contacts','job_activity','job_contacts'])if(!Array.isArray(d[key]))throw Error('This is not a CRM snapshot: missing '+key);if(d.jobs.some(j=>!j.id||!j.company_id||!j.status))throw Error('Snapshot contains incomplete job records.');if(d.jobs.length>10000)throw Error('Snapshot is too large.');return structuredClone({...d,ok:true,read_at:d.read_at||new Date().toISOString()});}
  function validateConfig(url,key){const u=new URL(url);if(u.protocol!=='https:'||u.username||u.password||u.pathname!=='/')throw Error('Use the HTTPS root URL of your Supabase project.');if(key.startsWith('sb_secret_'))throw Error('A secret key cannot be used in the browser. Use the publishable key.');if(key.startsWith('eyJ')){let claims;try{claims=JSON.parse(atob(key.split('.')[1].replaceAll('-','+').replaceAll('_','/')));}catch{throw Error('Invalid public key.');}if(claims.role!=='anon')throw Error('Only a public anon key is allowed here.');}else if(!key.startsWith('sb_publishable_'))throw Error('Use the public publishable or anon key.');return {url:u.origin,key};}
- function connect(next){if(channel&&client)client.removeChannel(channel);if(client)client.auth.stopAutoRefresh();config=next;client=window.supabase.createClient(config.url,config.key,{auth:{storageKey:prefix+'auth',persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});client.auth.onAuthStateChange((_event,session)=>{setTimeout(()=>{authStatus(session?'Signed in as '+session.user.email:'Not signed in');subscribe(session?.user.id);changed();},0);});}
+ function connect(next){if(channel&&client)client.removeChannel(channel);if(client)client.auth.stopAutoRefresh();config=next;client=window.supabase.createClient(config.url,config.key,{auth:{storageKey:prefix+'auth',persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});client.auth.onAuthStateChange((_event,session)=>{setTimeout(()=>{authStatus(session?'Signed in as '+session.user.email:'Not signed in');$('#connection-button').textContent=session?'Account / data':'Sign in';subscribe(session?.user.id);changed();},0);});}
  function subscribe(owner){if(channel){client.removeChannel(channel);channel=null;}if(!owner)return;channel=client.channel('crm-private-'+owner).on('postgres_changes',{event:'*',schema:'public',table:'crm_snapshots',filter:'owner_id=eq.'+owner},changed).subscribe();}
  function empty(){return {ok:true,storage:'empty',read_at:new Date().toISOString(),jobs:[],companies:[],contacts:[],job_activity:[],job_contacts:[]};}
- try{const raw=localStorage.getItem(configKey);if(raw){const c=JSON.parse(raw);config=validateConfig(c.url,c.key);connect(config);}}catch(e){authStatus(e.message);}
+ try{const raw=localStorage.getItem(configKey),c=raw?JSON.parse(raw):window.CRM_PUBLIC_CONFIG;if(c){config=validateConfig(c.url,c.key);connect(config);}}catch(e){authStatus(e.message);}
  try{const raw=sessionStorage.getItem(fileKey);if(raw)snapshot=validateSnapshot(JSON.parse(raw));}catch{}
  window.CRMData={
   async load(){
@@ -25,7 +25,7 @@
      return reply({...data,storage:'private',read_at:row.updated_at});
     }}
     if(snapshot){banner('Local snapshot · stays in this browser tab · refresh by opening a newer export');return reply({...snapshot,storage:'browser'});}
-    banner('Connect your private backend or open a local CRM snapshot. No application data is published with this site.');return reply(empty());
+    banner(config?'Sign in to load your private CRM. Your applications are visible only to your account.':'Connect your private backend or open a local CRM snapshot. No application data is published with this site.');return reply(empty());
    }catch(e){return reply({ok:false,error:e.message},400);}
   },
   async saveTags(companyId,tags,expectedTags){
@@ -35,9 +35,9 @@
    }catch(e){return reply({ok:false,error:e.message},400);}
   }
  };
- function openConnection(e){e?.preventDefault();$('#project-url').value=config?.url||'';$('#public-key').value=config?.key||'';$('#connection-dialog').showModal();}
+ function openConnection(e){e?.preventDefault();$('#project-url').value=config?.url||'';$('#public-key').value=config?.key||'';$('#backend-settings').open=!config;$('#connection-dialog').showModal();}
  $('#connection-button').onclick=openConnection;$('#privacy-link').onclick=openConnection;$('#connection-close').onclick=()=>$('#connection-dialog').close();
- $('#email-login').onclick=async()=>{const button=$('#email-login');button.disabled=true;try{const next=validateConfig($('#project-url').value.trim(),$('#public-key').value.trim());const email=$('#auth-email').value.trim();if(!email||!$('#auth-email').checkValidity())throw Error('Enter your sign-in email.');localStorage.setItem(configKey,JSON.stringify(next));connect(next);const {error}=await client.auth.signInWithOtp({email,options:{shouldCreateUser:false,emailRedirectTo:location.origin+location.pathname}});if(error)throw error;authStatus('Check your email for the sign-in link. Your account must already be invited to this private project.');}catch(e){authStatus(e.message);}finally{button.disabled=false;}};
+ $('#email-login').onclick=async()=>{const button=$('#email-login');button.disabled=true;try{const next=validateConfig($('#project-url').value.trim(),$('#public-key').value.trim());const email=$('#auth-email').value.trim();if(!email||!$('#auth-email').checkValidity())throw Error('Enter your sign-in email.');localStorage.setItem(configKey,JSON.stringify(next));connect(next);const {error}=await client.auth.signInWithOtp({email,options:{shouldCreateUser:false,emailRedirectTo:location.origin+location.pathname}});if(error)throw error;authStatus('Check your email for the sign-in link. It will return you to this dashboard.');}catch(e){authStatus(e.message);}finally{button.disabled=false;}};
  $('#sign-out').onclick=async()=>{if(client)await client.auth.signOut();authStatus('Signed out');changed();};
  $('#snapshot-file').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;try{if(f.size>10000000)throw Error('Choose a snapshot under 10 MB.');const parsed=validateSnapshot(JSON.parse(await f.text()));sessionStorage.setItem(fileKey,JSON.stringify(parsed));snapshot=parsed;authStatus('Local snapshot opened. It was not uploaded.');$('#connection-dialog').close();changed();}catch(e){authStatus(e.message);}};
  $('#snapshot-clear').onclick=()=>{sessionStorage.removeItem(fileKey);snapshot=null;authStatus('Local snapshot cleared.');changed();};

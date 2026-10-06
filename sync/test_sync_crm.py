@@ -1,6 +1,7 @@
 import copy
 import unittest
-from sync_crm import cycle, process_requests
+from unittest.mock import patch
+from sync_crm import cycle, process_requests, Remote as SupabaseRemote
 
 class Local:
     def __init__(self):
@@ -27,6 +28,11 @@ def change(tags, expected):
     return {'id': 'request-1', 'company_id': 'CO001', 'tags': tags, 'expected_tags': expected}
 
 class SyncTests(unittest.TestCase):
+    def test_modern_secret_uses_api_key_header_only(self):
+        with patch.dict('os.environ', {'SUPABASE_URL':'https://example.supabase.co',
+                        'CRM_OWNER_ID':'00000000-0000-0000-0000-000000000001',
+                        'SUPABASE_SECRET_KEY':'sb_secret_test'}, clear=True):
+            self.assertEqual(SupabaseRemote().headers, {'apikey':'sb_secret_test'})
     def test_queued_write_verified_then_published(self):
         local, remote = Local(), Remote([change(['champion', 'executive_sponsor'], [])])
         cycle(local, remote)

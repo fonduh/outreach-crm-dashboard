@@ -22,26 +22,33 @@ statuses are not editable through this connection.
 
 ## Private backend setup
 
-1. Create a Supabase project. Run `backend/schema.sql` in its SQL editor.
-2. Invite your own user through Supabase Auth. Public account creation is not
-   offered by this app. Add the GitHub Pages URL to Auth's allowed redirect URLs.
-3. Put the project URL and **public** publishable/anon key into the site's
-   **Data connection** dialog, then request a sign-in link.
-4. On your own computer, copy `sync/.env.example` to an untracked `.env`, use the
-   project's private legacy `service_role` JWT, and set your Auth user UUID as
-   `CRM_OWNER_ID`. Keep this file private; never paste the secret into the website.
-5. Run your local CRM server, then launch the publisher with those environment
-   variables set:
+1. Create a Supabase project and run `setup_access.py` in an interactive Terminal.
+   The helper stores project access locally with owner-only file permissions.
+2. Run `python3 backend/setup_backend.py`. This installs the schema and owner-only
+   access policies, disables public signup, registers your selected email without
+   sending mail, and configures the dashboard redirect. It creates a private local
+   sync config and `site/config.js`, containing only the project URL and public key.
+3. Deploy `site/`, open the dashboard, choose **Sign in**, and request a link using
+   the email registered during setup. Connection settings are already filled in.
+   Supabase's default mail service only delivers to project team email addresses;
+   a different address needs custom SMTP configured in Supabase.
+4. Run `python3 sync/run_sync.py --once` for the initial upload. On macOS, run
+   `python3 sync/install_macos.py` to install and start the server and publisher as
+   login services. The publisher checks every 30 seconds while the Mac is awake.
 
-```sh
-python3 sync/sync_crm.py --once
-python3 sync/sync_crm.py --interval 30
-```
+The macOS installer creates `com.fondahu.outreach-crm-server` and
+`com.fondahu.outreach-crm-sync` in `~/Library/LaunchAgents`. Logs are under
+`~/Library/Logs/outreach-crm/`. Server stdout is suppressed because the existing
+server prints its local extension token at startup. Both services restart after
+failure and at login. A sleeping or logged-out Mac does not sync; the last cloud
+snapshot remains available. Queued website tag edits wait until sync resumes.
 
-The publisher requires `CRM_ROOT`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`,
-and `CRM_OWNER_ID` in its environment. It uses only Python's standard library.
-The `.env` example documents variables; the script does not automatically load it.
-Use your process manager or shell environment to supply them.
+`sync/run_sync.py` reads `sync/config.private.json` (permissions 600). Secrets
+stay in that Git-ignored file, never in launchd plists or command-line arguments.
+For manual process management, `sync/sync_crm.py` accepts `CRM_ROOT`,
+`SUPABASE_URL`, `SUPABASE_SECRET_KEY`, and `CRM_OWNER_ID` in its environment.
+Legacy `SUPABASE_SERVICE_ROLE_KEY` is also supported. The `.env` example is only
+for reference; neither script automatically sources `.env` files.
 
 To make a local snapshot without connecting any cloud backend:
 
