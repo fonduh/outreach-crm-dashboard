@@ -1,0 +1,12 @@
+.audience .process,.audience #import,.audience #export,.audience #connection-button,
+.audience .list-foot,.audience #focus option[value="due"],
+.audience #focus option[value="champion"],.audience #focus option[value="executive_sponsor"]{display:none}
+.audience .workspace{grid-template-columns:minmax(350px,1fr) minmax(310px,.8fr)}
+.audience #stats{grid-template-columns:repeat(6,minmax(0,1fr))}
+.audience .stat{min-width:0;white-space:normal;gap:5px}
+.audience #chart-viewport{height:260px}
+.audience .panel{height:calc(100dvh - 565px);min-height:310px}
+.audience.totals-only .workspace,.audience.totals-only #role-map{display:none}
+.audience.totals-only #chart-viewport{height:380px}
+@media(max-width:750px){.audience .workspace{grid-template-columns:1fr}.audience .detail{grid-column:auto}.audience .panel{height:400px}.audience header>.actions{flex-wrap:wrap}}
+@media(max-width:650px){.audience #stats{grid-template-columns:repeat(3,minmax(0,1fr))}.audience .map-panel>.heading{min-width:0}.audience .map-panel .actions{flex-wrap:wrap}}

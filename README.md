@@ -20,6 +20,36 @@ local CRM API, verifies persistence, and then uploads the refreshed snapshot.
 The website reports queued changes as pending, not saved to the CRM. Application
 statuses are not editable through this connection.
 
+## Audience view (no sign-in)
+
+Share `https://fonduh.github.io/outreach-crm-dashboard/share/` with viewers.
+It shows companies, roles, stages, and totals without authentication. Anyone
+with the link can read this selected information. It contains no contacts,
+private notes, email evidence, relationship tags, or next-action reminders.
+Viewers can filter the chart and roles but cannot edit the CRM.
+
+`backend/sharing.sql` installs a read-only, allowlisted SQL projection through
+`get_shared_crm`. It reads the latest private snapshot only when an explicitly
+enabled entry in `crm_shared_views` identifies the owner. Anonymous users cannot
+read the full snapshot, read sharing configuration, or write either table.
+The shared client checks for updates every 30 seconds; the existing Mac sync
+continues to update the underlying private snapshot.
+
+After installing `backend/sharing.sql`, control sharing locally:
+
+```sh
+python3 backend/manage_sharing.py company_roles  # companies, roles, stages, totals
+python3 backend/manage_sharing.py totals        # anonymized totals only
+python3 backend/manage_sharing.py off           # stop serving the shared data
+```
+
+Disabling sharing stops future requests; it cannot recall copies viewers saved.
+The owner dashboard at the root URL still uses private sign-in. Its Mermaid
+process settings stay browser-local; the audience view uses the standard stage
+map with the current counts and a separate browser storage key. No CRM data is
+committed to GitHub. The audience page requests no search indexing, which is
+not access control.
+
 ## Private backend setup
 
 1. Create a Supabase project and run `setup_access.py` in an interactive Terminal.
