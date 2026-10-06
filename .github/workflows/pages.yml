@@ -5,6 +5,7 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+  actions: read
   pages: write
   id-token: write
 concurrency:
@@ -22,6 +23,27 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site
+      - name: Wait for uploaded artifact to become visible
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY'
+          import json, os, time, urllib.request
+          url = ('https://api.github.com/repos/' + os.environ['GITHUB_REPOSITORY']
+                 + '/actions/runs/' + os.environ['GITHUB_RUN_ID'] + '/artifacts')
+          for attempt in range(12):
+              request = urllib.request.Request(url, headers={
+                  'Authorization': 'Bearer ' + os.environ['GH_TOKEN'],
+                  'Accept': 'application/vnd.github+json'})
+              with urllib.request.urlopen(request, timeout=15) as response:
+                  artifacts = json.load(response)['artifacts']
+              if any(a['name'] == 'github-pages' and not a['expired'] for a in artifacts):
+                  print('Pages artifact is available.')
+                  break
+              time.sleep(5)
+          else:
+              raise SystemExit('Pages artifact did not become available within one minute.')
+          PY
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v4
