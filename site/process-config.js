@@ -1,7 +1,7 @@
 window.CRM_PUBLISHED_PROCESS = {
   "schemaVersion": 2,
-  "source": "flowchart LR\n    INTERESTED --> APPLIED[\"Applied / recruiting · {{APPLIED}}\"]\n    APPLIED --> SCREEN[\"Recruiter screen · {{SCREEN}}\"]\n    SCREEN --> INTERVIEW[\"Interviews · {{INTERVIEW}}\"]\n    INTERVIEW --> OFFER[\"Offer · {{OFFER}}\"]\n    APPLIED --> CLOSED[\"Rejected · {{CLOSED}}\"]",
-  "draft": "flowchart LR\n    INTERESTED --> APPLIED[\"Applied / recruiting · {{APPLIED}}\"]\n    APPLIED --> SCREEN[\"Recruiter screen · {{SCREEN}}\"]\n    SCREEN --> INTERVIEW[\"Interviews · {{INTERVIEW}}\"]\n    INTERVIEW --> OFFER[\"Offer · {{OFFER}}\"]\n    APPLIED --> CLOSED[\"Rejected · {{CLOSED}}\"]",
+  "source": "flowchart LR\n    INTERESTED[\"Interested · {{INTERESTED}}\"] --> APPLIED[\"Applied / recruiting · {{APPLIED}}\"]\n    APPLIED --> SCREEN[\"Screen · {{SCREEN}}\"]\n    SCREEN --> TASK[\"Take Home · {{TASK}}\"]\n    TASK --> INTERVIEW[\"Interview · {{INTERVIEW}}\"]\n    INTERVIEW --> OFFER[\"Offer · {{OFFER}}\"]\n    APPLIED --> CLOSED[\"Rejected · {{CLOSED}}\"]",
+  "draft": "flowchart LR\n    INTERESTED[\"Interested · {{INTERESTED}}\"] --> APPLIED[\"Applied / recruiting · {{APPLIED}}\"]\n    APPLIED --> SCREEN[\"Screen · {{SCREEN}}\"]\n    SCREEN --> TASK[\"Take Home · {{TASK}}\"]\n    TASK --> INTERVIEW[\"Interview · {{INTERVIEW}}\"]\n    INTERVIEW --> OFFER[\"Offer · {{OFFER}}\"]\n    APPLIED --> CLOSED[\"Rejected · {{CLOSED}}\"]",
   "bindings": {
     "READY": [
       "not_started"
@@ -26,5 +26,6 @@ window.CRM_PUBLISHED_PROCESS = {
       "rejected",
       "withdrawn"
     ]
-  }
+  },
+  "processRevision": 1
 };

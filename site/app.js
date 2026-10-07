@@ -11,7 +11,7 @@ const LEGACY_SOURCE=`flowchart LR
     TASK --> INTERVIEW["Interviews"]
     INTERVIEW --> OFFER["Offer"]
     APPLIED -. "Exit at any stage" .-> CLOSED["Closed"]`;
-const DEFAULT_SOURCE=`flowchart LR
+const PREVIOUS_DEFAULT_SOURCE=`flowchart LR
     INTERESTED["Interested · {{INTERESTED}}"] --> READY["Not applied · {{READY}}"]
     INTERESTED --> APPLIED_TOTAL["Applied / recruiting · {{APPLIED_TOTAL}}"]
     APPLIED_TOTAL --> APPLIED["Awaiting response · {{APPLIED}}"]
@@ -21,7 +21,18 @@ const DEFAULT_SOURCE=`flowchart LR
     INTERVIEW_TOTAL --> INTERVIEW["Interviews · {{INTERVIEW}}"]
     APPLIED_TOTAL --> OFFER["Offer · {{OFFER}}"]
     APPLIED_TOTAL --> CLOSED["Closed · {{CLOSED}}"]`;
-function defaults(){return {schemaVersion:2,source:DEFAULT_SOURCE,draft:DEFAULT_SOURCE,bindings:{READY:['not_started'],APPLIED:['applied'],SCREEN:['recruiter_screen'],TASK:['take_home'],INTERVIEW:['interview','onsite'],OFFER:['offer'],CLOSED:['rejected','withdrawn']}};}
+const PREVIOUS_PUBLISHED_SOURCE="flowchart LR\n    INTERESTED --> APPLIED[\"Applied / recruiting · {{APPLIED}}\"]\n    APPLIED --> SCREEN[\"Recruiter screen · {{SCREEN}}\"]\n    SCREEN --> INTERVIEW[\"Interviews · {{INTERVIEW}}\"]\n    INTERVIEW --> OFFER[\"Offer · {{OFFER}}\"]\n    APPLIED --> CLOSED[\"Rejected · {{CLOSED}}\"]";
+const DEFAULT_SOURCE=`flowchart LR
+    INTERESTED["Interested · {{INTERESTED}}"] --> READY["Not applied · {{READY}}"]
+    INTERESTED --> APPLIED_TOTAL["Applied / recruiting · {{APPLIED_TOTAL}}"]
+    APPLIED_TOTAL --> APPLIED["Awaiting response · {{APPLIED}}"]
+    APPLIED_TOTAL --> INTERVIEW_TOTAL["Interview process · {{INTERVIEW_TOTAL}}"]
+    INTERVIEW_TOTAL --> SCREEN["Screen · {{SCREEN}}"]
+    SCREEN --> TASK["Take Home · {{TASK}}"]
+    TASK --> INTERVIEW["Interview · {{INTERVIEW}}"]
+    INTERVIEW --> OFFER["Offer · {{OFFER}}"]
+    APPLIED_TOTAL --> CLOSED["Closed · {{CLOSED}}"]`;
+function defaults(){return {schemaVersion:2,processRevision:1,source:DEFAULT_SOURCE,draft:DEFAULT_SOURCE,bindings:{READY:['not_started'],APPLIED:['applied'],SCREEN:['recruiter_screen'],TASK:['take_home'],INTERVIEW:['interview','onsite'],OFFER:['offer'],CLOSED:['rejected','withdrawn']}};}
 function migrateLegacy(old){
  if(old.schemaVersion!==1)return old;
  const transform=source=>{
@@ -41,8 +52,30 @@ function validateState(s){
  const used=new Set();for(const [id,list] of Object.entries(s.bindings)){if(['__proto__','constructor','prototype'].includes(id)||AGGREGATES.has(id)||!Array.isArray(list))throw Error('Invalid stage binding.');for(const key of list){if(!BUCKETS[key]||used.has(key))throw Error('Invalid or duplicate CRM-stage mapping.');used.add(key);}}
  return structuredClone(s);
 }
+// Upgrade only shipped diagrams. Preserve custom sources, unfinished drafts and bindings.
+function restoreInterviewSequence(saved){
+ const next=validateState(saved);
+ if(next.processRevision>=1)return next;
+ const restore=source=>source===PREVIOUS_PUBLISHED_SOURCE&&window.CRM_PUBLISHED_PROCESS
+  ?window.CRM_PUBLISHED_PROCESS.source:source===PREVIOUS_DEFAULT_SOURCE?DEFAULT_SOURCE:source;
+ next.source=restore(next.source);next.draft=restore(next.draft);next.processRevision=1;
+ return next;
+}
+
 let state=window.CRM_PUBLISHED_PROCESS?validateState(window.CRM_PUBLISHED_PROCESS):defaults(),data=null,nodes=[],history=[],selectedStage='',selectedJob='',bindingStage='APPLIED',statusFilter='',revision=0,zoom=1,box=null,busy=false;
-try{const saved=window.CRM_AUDIENCE?null:localStorage.getItem(KEY);if(saved){const old=JSON.parse(saved);if(old.schemaVersion===1&&!localStorage.getItem(KEY+'-pre-interested'))localStorage.setItem(KEY+'-pre-interested',saved);state=validateState(old);}}catch(e){setTimeout(()=>notice('Saved process could not be loaded; original storage has not been overwritten.'),1000);}
+try{
+ const saved=window.CRM_AUDIENCE?null:localStorage.getItem(KEY);
+ if(saved){
+  const old=JSON.parse(saved);
+  if(old.schemaVersion===1&&!localStorage.getItem(KEY+'-pre-interested'))localStorage.setItem(KEY+'-pre-interested',saved);
+  state=restoreInterviewSequence(old);
+  if(state.source!==old.source||state.draft!==old.draft){
+   if(!localStorage.getItem(KEY+'-pre-interview-sequence'))localStorage.setItem(KEY+'-pre-interview-sequence',saved);
+   localStorage.setItem(KEY,JSON.stringify(state));
+  }
+ }
+}catch(e){setTimeout(()=>notice('Saved process could not be loaded; original storage has not been overwritten.'),1000);}
+
 function el(tag,cls='',text=''){const e=document.createElement(tag);if(cls)e.className=cls;if(text)e.textContent=text;return e;}
 function notice(text){$('#notice').textContent=text;$('#notice').hidden=false;clearTimeout(notice.timer);notice.timer=setTimeout(()=>$('#notice').hidden=true,6000);}
 function persist(){try{localStorage.setItem(KEY,JSON.stringify(state));$('#process-save').textContent='Process saved in this browser · export to keep a copy';}catch{$('#process-save').textContent='Browser save unavailable — export your process';}}
