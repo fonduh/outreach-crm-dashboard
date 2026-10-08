@@ -108,6 +108,20 @@ with explicit submission records counted separately. Each job also belongs to on
 current leaf group. Edit Mermaid and display bindings in the interface. Browser
 process settings can be exported/imported independently of private job records.
 
+## Application and stage age
+
+The local CRM derives `application_age_days` from the earliest recorded application
+(or the applied status date when no application event exists). `stage_age_days`
+starts at the first record of the current stage; repeated rounds and follow-ups
+do not reset it. Current status dates are a fallback only when they identify the
+same stage. Unapplied roles have no application age; missing dates stay unknown.
+Both clocks count Pacific calendar days through today, including closed roles.
+
+The shared projection exposes only the day counts and their calculation date,
+not underlying activity or notes. Counts advance even when the Mac's last snapshot
+is unchanged. The role list shows application age, the stage card shows stage age,
+and role-map CSV exports include both fields.
+
 ## Sources and dependencies
 
 - [GitHub Pages](https://docs.github.com/en/pages/getting-started-with-github-pages/creating-a-github-pages-site)

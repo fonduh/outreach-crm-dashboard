@@ -31,6 +31,15 @@ as $$
    'company_id', case when r.detail_level='company_roles' then r.job->>'company_id' else 'WITHHELD' end,
    'title', case when r.detail_level='company_roles' then r.job->>'title' else 'Role withheld' end,
    'status', r.job->>'status', 'view_stage', r.job->>'view_stage',
+   'application_age_days', case when r.detail_level='company_roles' and jsonb_typeof(r.job->'application_age_days')='number'
+    then (r.job->>'application_age_days')::int + greatest(0,
+     (now() at time zone 'America/Los_Angeles')::date - (r.job->>'age_as_of')::date)
+    else null end,
+   'stage_age_days', case when r.detail_level='company_roles' and jsonb_typeof(r.job->'stage_age_days')='number'
+    then (r.job->>'stage_age_days')::int + greatest(0,
+     (now() at time zone 'America/Los_Angeles')::date - (r.job->>'age_as_of')::date)
+    else null end,
+   'age_as_of', to_char(now() at time zone 'America/Los_Angeles', 'YYYY-MM-DD'),
    'explicit_application', exists (
     select 1 from jsonb_array_elements(shared.payload->'job_activity') a
     where a->>'job_id'=r.job->>'id' and a->>'stage'='applied'

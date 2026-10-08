@@ -99,6 +99,25 @@ function company(job){return data.companies.find(c=>c.id===job.company_id)||{nam
 function tags(c){return (c.relationship_tags||'').split('|').filter(Boolean);}
 function isOpen(j){return !['rejected','withdrawn'].includes(j.status);}
 function today(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+// Calendar-day ages use Pacific dates, including when a shared snapshot is offline.
+function ageDays(job,field,asOf=new Date().toLocaleDateString('en-CA',{timeZone:'America/Los_Angeles'})){
+ const days=job[field];if(!Number.isInteger(days)||days<0)return null;
+ const stamp=job.age_as_of;
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(stamp||''))return days;
+ const elapsed=Math.floor((Date.parse(asOf+'T00:00:00Z')-Date.parse(stamp+'T00:00:00Z'))/86400000);
+ return Number.isFinite(elapsed)?days+Math.max(0,elapsed):days;
+}
+function ageText(job,field){
+ const days=ageDays(job,field);
+ if(days!==null)return days+' '+(days===1?'day':'days');
+ return field==='application_age_days'&&job.status==='not_started'?'Not applied':'Date unknown';
+}
+function applicationStage(job){
+ const box=el('div','action-box');box.append(el('strong','','APPLICATION STAGE'),el('p','',BUCKETS[job.view_stage]||job.status));
+ const age=el('div','stage-age','Days in application stage: '+ageText(job,'stage_age_days'));
+ age.title='Calendar days since this stage was first recorded. Notes and follow-ups do not reset the count.';
+ box.append(age);return box;
+}
 function due(j){return isOpen(j)&&j.next_step_date&&j.next_step_date<=today();}
 function fit(){if(!box)return;const v=$('#chart-viewport'),svg=$('#chart svg');if(!svg)return;const scale=Math.min((v.clientWidth-30)/box.width,(v.clientHeight-20)/box.height)*zoom;svg.style.width=box.width*scale+'px';svg.style.height=box.height*scale+'px';$('#chart').style.width=svg.style.width;}
 function selectStage(id){selectedStage=id;statusFilter='';if(id&&id!=='UNMAPPED'&&!AGGREGATES.has(id)){bindingStage=id;renderBindings();}renderAll();}
@@ -125,7 +144,7 @@ function visibleJobs(){
 function renderRoles(){
  const jobs=visibleJobs();if(!jobs.some(j=>j.id===selectedJob))selectedJob=jobs[0]?.id||'';
  $('#roles-title').textContent=selectedStage==='UNMAPPED'?'Unmapped roles':nodes.find(n=>n.id===selectedStage)?.label||(statusFilter==='closed'?'Closed roles':statusFilter==='progressed'?'Applied / recruiting':statusFilter?BUCKETS[statusFilter]:'Interested · all roles');$('#role-count').textContent=jobs.length+' roles';const root=$('#role-list');root.replaceChildren();
- for(const j of jobs){const c=company(j),b=el('button','role'+(selectedJob===j.id?' selected':''));b.dataset.job=j.id;const top=el('div','role-top');top.append(el('b','',c.name),el('span','status'+(!isOpen(j)?' closed':''),BUCKETS[j.view_stage]||j.status));b.append(top,el('div','role-title',j.title),el('div','next',data.read_only?'':j.next_step||'No next step recorded'));
+ for(const j of jobs){const c=company(j),b=el('button','role'+(selectedJob===j.id?' selected':''));b.dataset.job=j.id;const top=el('div','role-top');top.append(el('b','',c.name),el('span','status'+(!isOpen(j)?' closed':''),BUCKETS[j.view_stage]||j.status));b.append(top,el('div','role-title',j.title));const age=el('div','application-age','Total application age: '+ageText(j,'application_age_days'));age.title='Calendar days since the first recorded application date; unknown dates are not estimated.';b.append(age,el('div','next',data.read_only?'':j.next_step||'No next step recorded'));
  const bottom=el('div','role-bottom');bottom.append(el('span',due(j)?'due':'',data.read_only?labelFor(groupFor(j)):j.next_step_date?(due(j)?'Review due · ':'Review · ')+j.next_step_date:'No review date'),el('span','',tags(c).map(t=>t==='champion'?'Champion':'Exec sponsor').join(' · ')||j.id));b.append(bottom);b.onclick=()=>{selectedJob=j.id;renderRoles();renderDetails();};root.append(b);}
  if(!jobs.length)root.append(el('div','empty','No roles match this view. Use All roles or change your filters.'));
 }
@@ -133,10 +152,10 @@ function sourceLinks(text,parent){for(const url of [...new Set(text.match(/https
 function renderDetails(){
  const root=$('#job-details');root.replaceChildren();const j=data.jobs.find(j=>j.id===selectedJob);if(!j){$('#company-name').textContent='Choose a role';$('#job-id').textContent='';root.append(el('p','empty','Select a role from the list to see its next step and history.'));return;}
  const c=company(j);$('#company-name').textContent=c.name;$('#job-id').textContent=j.id;root.append(el('h3','',j.title),el('span','status'+(!isOpen(j)?' closed':''),BUCKETS[j.view_stage]||j.status));
+ root.append(applicationStage(j));
  if(data.read_only){
-  const summary=el('div','action-box');summary.append(el('strong','','APPLICATION STAGE'),el('p','',BUCKETS[j.view_stage]||j.status));root.append(summary);
   root.append(el('p','hint',explicitAppliedIds().has(j.id)?'Application submission recorded.':progressed(j)?'Recruiting activity recorded; submission date not established.':'Included in interested roles.'));
-  root.append(el('p','hint','This shared view includes company, role, and stage information.'));
+  root.append(el('p','hint','This shared view includes company, role, stage, and age in days.'));
   return;
  }
  if(/^https?:\/\//.test(j.url)){const a=el('a','','View posting ↗');a.href=j.url;a.target='_blank';a.rel='noopener';root.append(document.createTextNode(' · '),a);}
@@ -165,7 +184,7 @@ $('#zoom-in').onclick=()=>{zoom=Math.min(zoom*1.3,5);fit();};$('#zoom-out').oncl
 $('#undo').onclick=async()=>{if(!history.length||busy)return;if(await applySource(history.at(-1).source,{replacement:history.at(-1),record:false,preserveDraft:true})){history.pop();$('#undo').disabled=!history.length;}};
 $('#reset').onclick=()=>confirm('Restore the starting process?','This restores the diagram and display groups. Your applications and company tags stay in the CRM.',()=>{const next=defaults();applySource(next.source,{replacement:next});});$('#cancel').onclick=()=>$('#confirm').close();
 $('#export').onclick=()=>download('job-application-process.json',JSON.stringify({...state,exportedAt:new Date().toISOString()},null,2),'application/json');$('#mmd').onclick=()=>download('job-application-process.mmd',renderSource($('#source').value));
-$('#role-map').onclick=()=>{if(data.read_only){const rows=[['company','role','current_stage'],...data.jobs.map(j=>[company(j).name,j.title,BUCKETS[j.view_stage]||j.status])];download('shared-job-stages.csv',rows.map(row=>row.map(v=>'\"'+String(v??'').replaceAll('\"','\"\"')+'\"').join(',')).join('\r\n'),'text/csv');return;}const confirmed=explicitAppliedIds(),rows=[['job_id','company','role','interested','applied_or_recruiting','explicit_application_entry','current_stage','mapped_group','next_step','review_date'],...data.jobs.map(j=>[j.id,company(j).name,j.title,'yes',progressed(j)?'yes':'no',confirmed.has(j.id)?'yes':'no',BUCKETS[j.view_stage]||j.status,labelFor(groupFor(j)),j.next_step,j.next_step_date])];download('job-stage-map.csv',rows.map(row=>row.map(v=>'"'+String(v??'').replaceAll('"','""')+'"').join(',')).join('\r\n'),'text/csv');};$('#import').onclick=()=>$('#import-file').click();$('#import-file').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;try{if(f.size>1000000)throw Error('File is too large.');const next=validateState(JSON.parse(await f.text()));confirm('Import this process?','Replace the diagram and display groups? This does not change job records.',()=>applySource(next.source,{replacement:next,preserveDraft:true}));}catch(e){notice('Import failed: '+e.message);}};
+$('#role-map').onclick=()=>{if(data.read_only){const rows=[['company','role','current_stage','application_age_days','stage_age_days'],...data.jobs.map(j=>[company(j).name,j.title,BUCKETS[j.view_stage]||j.status,ageDays(j,'application_age_days'),ageDays(j,'stage_age_days')])];download('shared-job-stages.csv',rows.map(row=>row.map(v=>'\"'+String(v??'').replaceAll('\"','\"\"')+'\"').join(',')).join('\r\n'),'text/csv');return;}const confirmed=explicitAppliedIds(),rows=[['job_id','company','role','interested','applied_or_recruiting','explicit_application_entry','current_stage','mapped_group','application_age_days','stage_age_days','next_step','review_date'],...data.jobs.map(j=>[j.id,company(j).name,j.title,'yes',progressed(j)?'yes':'no',confirmed.has(j.id)?'yes':'no',BUCKETS[j.view_stage]||j.status,labelFor(groupFor(j)),ageDays(j,'application_age_days'),ageDays(j,'stage_age_days'),j.next_step,j.next_step_date])];download('job-stage-map.csv',rows.map(row=>row.map(v=>'"'+String(v??'').replaceAll('"','""')+'"').join(',')).join('\r\n'),'text/csv');};$('#import').onclick=()=>$('#import-file').click();$('#import-file').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;try{if(f.size>1000000)throw Error('File is too large.');const next=validateState(JSON.parse(await f.text()));confirm('Import this process?','Replace the diagram and display groups? This does not change job records.',()=>applySource(next.source,{replacement:next,preserveDraft:true}));}catch(e){notice('Import failed: '+e.message);}};
 (async()=>{mermaid.initialize({startOnLoad:false,securityLevel:'strict',suppressErrorRendering:true,maxTextSize:50000,maxEdges:300,theme:'base',fontFamily:'Arial, sans-serif',themeVariables:{primaryColor:'#f2f5ec',primaryTextColor:'#264532',primaryBorderColor:'#afc5b2',lineColor:'#92ac99',edgeLabelBackground:'#fff',fontSize:'15px'},flowchart:{htmlLabels:false,curve:'basis',nodeSpacing:22,rankSpacing:30,padding:12,useMaxWidth:false}});await refresh();if(!await applySource(state.source,{save:false,record:false,preserveDraft:true})){const next=defaults();await applySource(next.source,{replacement:next,save:false,record:false});notice('Saved process could not render; showing the starter without overwriting saved storage.');}})();
 
 window.addEventListener('crm-data-changed',()=>{if(!busy)refresh();});

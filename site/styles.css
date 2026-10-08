@@ -8,3 +8,5 @@
 .shared-data .list-foot,.shared-data #focus option[value="due"],
 .shared-data #focus option[value="champion"],.shared-data #focus option[value="executive_sponsor"]{display:none}
 .shared-data.totals-only .workspace,.shared-data.totals-only #role-map{display:none}
+
+.application-age{margin-top:7px;font-size:12px;color:#526a5a}.stage-age{margin-top:8px;font-size:13px;font-weight:600;color:#264532}
