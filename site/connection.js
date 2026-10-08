@@ -29,7 +29,15 @@
      return reply({...data,storage:'private',read_at:row.updated_at});
     }}
     if(snapshot){banner('Local snapshot · stays in this browser tab · refresh by opening a newer export');return reply({...snapshot,storage:'browser'});}
-    banner(config?'Sign in to view your full CRM and edit company relationships. Use Share view for the public overview.':'Connect your private backend or open a local CRM snapshot. No application data is published with this site.');return reply(empty());
+    if(client){
+     const {data:shared,error}=await client.rpc('get_shared_crm',{share_slug:'job-search'});
+     if(signingOut||version!==connectionVersion)return reply(empty());
+     if(error||!shared)throw Error('The shared CRM could not load. Try Refresh CRM or sign in for private access.');
+     const data=validateSnapshot(shared);
+     banner('CRM connected · public overview · updated '+new Date(data.read_at).toLocaleString()+'. Sign in for private notes and company relationships.');
+     return reply({...data,storage:'shared',read_only:true});
+    }
+    banner('Connect your private backend or open a local CRM snapshot.');return reply(empty());
    }catch(e){return reply({ok:false,error:e.message},400);}
   },
   async saveTags(companyId,tags,expectedTags){

@@ -1,7 +1,8 @@
 import copy
+import http.client
 import unittest
 from unittest.mock import patch
-from sync_crm import cycle, process_requests, Remote as SupabaseRemote
+from sync_crm import cycle, process_requests, Remote as SupabaseRemote, request_json
 
 class Local:
     def __init__(self):
@@ -28,6 +29,12 @@ def change(tags, expected):
     return {'id': 'request-1', 'company_id': 'CO001', 'tags': tags, 'expected_tags': expected}
 
 class SyncTests(unittest.TestCase):
+    def test_transient_disconnect_is_retryable_without_exposing_response(self):
+        for error in [http.client.RemoteDisconnected('private upstream detail'), TimeoutError('private host')]:
+            with self.subTest(error=type(error).__name__), patch('urllib.request.urlopen', side_effect=error):
+                with self.assertRaisesRegex(RuntimeError, '^Connection failed; check that the server and network are available$'):
+                    request_json('https://example.supabase.co')
+
     def test_modern_secret_uses_api_key_header_only(self):
         with patch.dict('os.environ', {'SUPABASE_URL':'https://example.supabase.co',
                         'CRM_OWNER_ID':'00000000-0000-0000-0000-000000000001',

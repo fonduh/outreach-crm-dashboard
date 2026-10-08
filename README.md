@@ -44,8 +44,11 @@ python3 backend/manage_sharing.py off           # stop serving the shared data
 ```
 
 Disabling sharing stops future requests; it cannot recall copies viewers saved.
-The owner dashboard at the root URL still uses private sign-in. Its Mermaid
-process edits stay browser-local. `site/process-config.js` preserves the recovered
+The owner dashboard at the root URL automatically loads the same approved public
+projection when signed out; private sign-in adds notes and company relationships.
+A chosen local snapshot takes precedence over the public fallback. A failed shared
+request displays a connection error instead of reporting zero applications.
+Mermaid process edits stay browser-local. `site/process-config.js` preserves the recovered
 owner stage map as the published baseline; the audience page always uses that
 map with current counts, regardless of a visitor's local storage. Owner-browser
 edits continue to take precedence in the private editor. Future edits must be

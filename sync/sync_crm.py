@@ -8,6 +8,7 @@ import argparse
 import datetime as dt
 import fcntl
 import hashlib
+import http.client
 import json
 import os
 from pathlib import Path
@@ -32,7 +33,7 @@ def request_json(url, method='GET', body=None, headers=None):
     except urllib.error.HTTPError as error:
         # Do not dump request headers, keys, private records, or server responses.
         raise RuntimeError(f'{method} request failed with HTTP {error.code}') from None
-    except urllib.error.URLError:
+    except (urllib.error.URLError, OSError, http.client.HTTPException):
         raise RuntimeError('Connection failed; check that the server and network are available') from None
 
 

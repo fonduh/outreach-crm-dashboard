@@ -4,3 +4,7 @@
 @media(min-width:1101px) and (min-height:930px){#chart-viewport{height:250px}.panel{height:calc(100dvh - 588px);min-height:330px}}
 
 .connection-banner{font-size:11px;padding:9px 12px;margin-bottom:10px;border:1px solid #d7dfcb;border-radius:7px;background:#edf2e5;color:#4b6652}.connection-banner:empty{display:none}#connection-dialog{width:min(560px,calc(100% - 25px));max-height:90vh;overflow:auto}#connection-dialog label{display:block;margin:12px 0;font-size:11px}#connection-dialog input{display:block;margin-top:4px;width:100%;padding:8px;border:1px solid var(--line);border-radius:5px}#connection-dialog p{font-size:11px;color:var(--muted)}#connection-dialog .actions{flex-wrap:wrap}#auth-state{font-size:11px;margin:12px 0;color:var(--green)}.actions #live-status{max-width:160px}hr{border:0;border-top:1px solid var(--line);margin:20px 0}.panel{height:calc(100dvh - 570px)}@media(min-width:1101px) and (min-height:930px){.panel{height:calc(100dvh - 630px);min-height:300px}}@media(max-width:1100px){.panel{height:450px}}
+
+.shared-data .list-foot,.shared-data #focus option[value="due"],
+.shared-data #focus option[value="champion"],.shared-data #focus option[value="executive_sponsor"]{display:none}
+.shared-data.totals-only .workspace,.shared-data.totals-only #role-map{display:none}
