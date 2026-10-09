@@ -150,7 +150,8 @@ function renderRoles(){
 }
 function sourceLinks(text,parent){for(const url of [...new Set(text.match(/https?:\/\/[^\s\])]+/g)||[])]){try{const u=new URL(url);const a=el('a','',u.hostname.includes('google')?'Email source ↗':'Source ↗');a.href=u.href;a.target='_blank';a.rel='noopener';parent.append(a,document.createTextNode(' '));}catch{}}}
 function renderDetails(){
- const root=$('#job-details');root.replaceChildren();const j=data.jobs.find(j=>j.id===selectedJob);if(!j){$('#company-name').textContent='Choose a role';$('#job-id').textContent='';root.append(el('p','empty','Select a role from the list to see its next step and history.'));return;}
+ const root=$('#job-details');root.replaceChildren();const j=data.jobs.find(j=>j.id===selectedJob);if(!j){window.CRMComments?.show(null,data);$('#company-name').textContent='Choose a role';$('#job-id').textContent='';root.append(el('p','empty','Select a role from the list to see its next step and history.'));return;}
+ window.CRMComments?.show(j,data);
  const c=company(j);$('#company-name').textContent=c.name;$('#job-id').textContent=j.id;root.append(el('h3','',j.title),el('span','status'+(!isOpen(j)?' closed':''),BUCKETS[j.view_stage]||j.status));
  root.append(applicationStage(j));
  if(data.read_only){

@@ -13,6 +13,7 @@
  function empty(){return {ok:true,storage:'empty',read_at:new Date().toISOString(),jobs:[],companies:[],contacts:[],job_activity:[],job_contacts:[]};}
  try{const raw=localStorage.getItem(configKey),c=raw?JSON.parse(raw):window.CRM_PUBLIC_CONFIG;if(c){config=validateConfig(c.url,c.key);connect(config);}}catch(e){authStatus(e.message);}
  try{const raw=sessionStorage.getItem(fileKey);if(raw)snapshot=validateSnapshot(JSON.parse(raw));}catch{}
+ window.CRMCommentsTransport={rpc:async(name,args={})=>{if(!client)throw Error('Sign in to use private comments.');const {data:{session}}=await client.auth.getSession();if(!session)throw Error('Sign in to use private comments.');const {data,error}=await client.rpc(name,args);if(error)throw Error(error.message||'The request failed.');return data;}};
  window.CRMData={
   async load(){
    const version=connectionVersion;
@@ -51,7 +52,7 @@
  $('#connection-button').onclick=openConnection;$('#privacy-link').onclick=openConnection;$('#connection-close').onclick=()=>$('#connection-dialog').close();
  $('#email-login').onclick=async()=>{const button=$('#email-login');button.disabled=true;try{const next=validateConfig($('#project-url').value.trim(),$('#public-key').value.trim());const email=$('#auth-email').value.trim();if(!email||!$('#auth-email').checkValidity())throw Error('Enter your sign-in email.');localStorage.setItem(configKey,JSON.stringify(next));connect(next);const {error}=await client.auth.signInWithOtp({email,options:{shouldCreateUser:false,emailRedirectTo:location.origin+location.pathname}});if(error)throw error;authStatus('Check your email for the sign-in link. It will return you to this dashboard.');}catch(e){authStatus(e.message);}finally{button.disabled=false;}};
  $('#sign-out').onclick=async()=>{
-  const button=$('#sign-out');button.disabled=true;signingOut=true;connectionVersion++;snapshot=null;sessionStorage.removeItem(fileKey);changed();
+  const button=$('#sign-out');button.disabled=true;signingOut=true;window.CRMComments?.clear();connectionVersion++;snapshot=null;sessionStorage.removeItem(fileKey);changed();
   try{if(client)await client.auth.signOut({scope:'local'});}catch{}
   finally{
    // A revoked/expired session can make the server reject logout. Always clear
